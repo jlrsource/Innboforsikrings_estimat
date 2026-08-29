@@ -9,9 +9,21 @@ type SelectedImage = {
   previewUrl: string;
 };
 
+type ItemEstimate = {
+  fileName: string;
+  item: string;
+  brand: string | null;
+  condition: string;
+  estimatedValueNok: number;
+  note: string | null;
+};
+
 export default function KomIGang() {
   const [images, setImages] = useState<SelectedImage[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
+  const [results, setResults] = useState<ItemEstimate[] | null>(null);
+  const [totalNok, setTotalNok] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function handleFiles(fileList: FileList | null) {
     if (!fileList) return;
@@ -20,7 +32,8 @@ export default function KomIGang() {
       previewUrl: URL.createObjectURL(file),
     }));
     setImages((prev) => [...prev, ...newImages]);
-    setMessage(null);
+    setResults(null);
+    setError(null);
   }
 
   function removeImage(index: number) {
@@ -32,8 +45,25 @@ export default function KomIGang() {
     });
   }
 
-  function handleAnalyze() {
-    setMessage("Analyse er ikke koblet til backend ennå, det kommer i neste steg.");
+  async function handleAnalyze() {
+    setLoading(true);
+    setError(null);
+    setResults(null);
+
+    const formData = new FormData();
+    images.forEach((img) => formData.append("images", img.file));
+
+    try {
+      const res = await fetch("/api/analyze", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Analyse feilet");
+      const data = await res.json();
+      setResults(data.results);
+      setTotalNok(data.totalNok);
+    } catch (err) {
+      setError("Noe gikk galt under analysen. Prøv igjen.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -77,14 +107,41 @@ export default function KomIGang() {
               ))}
             </div>
 
-            <button type="button" className={styles.analyzeButton} onClick={handleAnalyze}>
-              Analyser {images.length} bilde{images.length > 1 ? "r" : ""}
+            <button
+              type="button"
+              className={styles.analyzeButton}
+              onClick={handleAnalyze}
+              disabled={loading}
+            >
+              {loading
+                ? "Analyserer …"
+                : `Analyser ${images.length} bilde${images.length > 1 ? "r" : ""}`}
             </button>
           </>
         )}
 
-        {message && <p className={styles.message}>{message}</p>}
+        {error && <p className={styles.message}>{error}</p>}
+
+        {results && (
+          <div className={styles.results}>
+            {results.map((r) => (
+              <div className={styles.resultRow} key={r.fileName}>
+                <div>
+                  <strong>{r.item}</strong>
+                  {r.brand && <span className={styles.resultMeta}> · {r.brand}</span>}
+                  <span className={styles.resultMeta}> · {r.condition}</span>
+                </div>
+                <div className={styles.resultValue}>{r.estimatedValueNok.toLocaleString("nb-NO")} kr</div>
+              </div>
+            ))}
+            <div className={styles.total}>
+              <span>Estimert totalsum</span>
+              <span>{totalNok?.toLocaleString("nb-NO")} kr</span>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
 }
+
