@@ -10,7 +10,8 @@ type SelectedImage = {
 };
 
 type ItemEstimate = {
-  fileName: string;
+  id: string;
+  source: "bilde" | "tekst";
   item: string;
   brand: string | null;
   estimatedNewPriceNok: number;
@@ -24,20 +25,22 @@ type Recommendation = {
 
 type AnalyzeResponse = {
   results: ItemEstimate[];
-  totalUsedValueNok: number;
   totalReplacementValueNok: number;
   recommendation: Recommendation;
 };
 
 export default function KomIGang() {
   const [images, setImages] = useState<SelectedImage[]>([]);
+  const [textItems, setTextItems] = useState<string[]>([]);
+  const [newTextItem, setNewTextItem] = useState("");
   const [data, setData] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleFiles(fileList: FileList | null) {
     if (!fileList) return;
-    const newImages = Array.from(fileList).map((file) => ({
+    const imageFiles = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+    const newImages = imageFiles.map((file) => ({
       file,
       previewUrl: URL.createObjectURL(file),
     }));
@@ -55,6 +58,19 @@ export default function KomIGang() {
     });
   }
 
+  function handleAddTextItem(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = newTextItem.trim();
+    if (!trimmed) return;
+    setTextItems((prev) => [...prev, trimmed]);
+    setNewTextItem("");
+    setData(null);
+  }
+
+  function removeTextItem(index: number) {
+    setTextItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleAnalyze() {
     setLoading(true);
     setError(null);
@@ -62,6 +78,7 @@ export default function KomIGang() {
 
     const formData = new FormData();
     images.forEach((img) => formData.append("images", img.file));
+    formData.append("textItems", JSON.stringify(textItems));
 
     try {
       const res = await fetch("/api/analyze", { method: "POST", body: formData });
@@ -75,6 +92,8 @@ export default function KomIGang() {
     }
   }
 
+  const totalCount = images.length + textItems.length;
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -84,49 +103,99 @@ export default function KomIGang() {
 
         <h1 className={styles.title}>Last opp bilder</h1>
         <p className={styles.subhead}>
-          Velg bilder av det du eier. Du kan legge til flere etter hvert.
+          Velg bilder av det du eier, eller en hel mappe med bilder. Du kan også skrive inn gjenstander uten bilde.
         </p>
 
-        <label className={styles.dropzone}>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => handleFiles(e.target.files)}
-            className={styles.fileInput}
-          />
-          <span>Klikk for å velge bilder, eller dra dem hit</span>
-        </label>
+        <div className={styles.uploadRow}>
+          <label className={styles.dropzone}>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => handleFiles(e.target.files)}
+              className={styles.fileInput}
+            />
+            <span>Klikk for å velge bilder, eller dra dem hit</span>
+          </label>
+
+          <label className={styles.folderZone}>
+            <input
+              type="file"
+              multiple
+              onChange={(e) => handleFiles(e.target.files)}
+              className={styles.fileInput}
+              {...({ webkitdirectory: "true", directory: "true" } as Record<string, string>)}
+            />
+            <span>Eller velg en hel mappe</span>
+          </label>
+        </div>
 
         {images.length > 0 && (
-          <>
-            <div className={styles.grid}>
-              {images.map((image, index) => (
-                <div className={styles.thumb} key={image.previewUrl}>
-                  <img src={image.previewUrl} alt={image.file.name} />
+          <div className={styles.grid}>
+            {images.map((image, index) => (
+              <div className={styles.thumb} key={image.previewUrl}>
+                <img src={image.previewUrl} alt={image.file.name} />
+                <button
+                  type="button"
+                  className={styles.remove}
+                  onClick={() => removeImage(index)}
+                  aria-label={`Fjern ${image.file.name}`}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <section className={styles.manualSection}>
+          <h2 className={styles.manualHeading}>Legg til gjenstand uten bilde</h2>
+          <p className={styles.manualHint}>
+            Skriv inn navnet, f.eks. «iPhone 13», så anslår KI-en prisen basert på navnet når du analyserer.
+          </p>
+          <form className={styles.manualForm} onSubmit={handleAddTextItem}>
+            <input
+              type="text"
+              placeholder="Navn på gjenstand"
+              value={newTextItem}
+              onChange={(e) => setNewTextItem(e.target.value)}
+              className={styles.manualInput}
+            />
+            <button type="submit" className={styles.manualAddButton}>
+              Legg til
+            </button>
+          </form>
+
+          {textItems.length > 0 && (
+            <ul className={styles.textItemList}>
+              {textItems.map((name, index) => (
+                <li key={`${name}-${index}`} className={styles.textItemChip}>
+                  {name}
                   <button
                     type="button"
-                    className={styles.remove}
-                    onClick={() => removeImage(index)}
-                    aria-label={`Fjern ${image.file.name}`}
+                    className={styles.manualRemove}
+                    onClick={() => removeTextItem(index)}
+                    aria-label={`Fjern ${name}`}
                   >
                     ×
                   </button>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
+          )}
+        </section>
 
-            <button
-              type="button"
-              className={styles.analyzeButton}
-              onClick={handleAnalyze}
-              disabled={loading}
-            >
-              {loading
-                ? "Analyserer …"
-                : `Analyser ${images.length} bilde${images.length > 1 ? "r" : ""}`}
-            </button>
-          </>
+        {totalCount > 0 && (
+          <button
+            type="button"
+            className={styles.analyzeButton}
+            onClick={handleAnalyze}
+            disabled={loading}
+          >
+            {loading
+              ? "Analyserer …"
+              : `Analyser ${totalCount} gjenstand${totalCount > 1 ? "er" : ""}`}
+          </button>
         )}
 
         {error && <p className={styles.message}>{error}</p>}
@@ -135,10 +204,14 @@ export default function KomIGang() {
           <>
             <div className={styles.results}>
               {data.results.map((r) => (
-                <div className={styles.resultRow} key={r.fileName}>
+                <div className={styles.resultRow} key={r.id}>
                   <div>
                     <strong>{r.item}</strong>
                     {r.brand && <span className={styles.resultMeta}> · {r.brand}</span>}
+                    <span className={styles.resultMeta}> · fra {r.source}</span>
+                  </div>
+                  <div className={styles.resultValue}>
+                    {r.estimatedNewPriceNok.toLocaleString("nb-NO")} kr
                   </div>
                 </div>
               ))}
