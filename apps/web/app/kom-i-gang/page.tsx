@@ -14,14 +14,27 @@ type ItemEstimate = {
   item: string;
   brand: string | null;
   condition: string;
+  estimatedAgeYears: number | null;
   estimatedValueNok: number;
+  estimatedNewPriceNok: number;
   note: string | null;
+};
+
+type Recommendation = {
+  recommendedSumNok: number;
+  reasoning: string;
+};
+
+type AnalyzeResponse = {
+  results: ItemEstimate[];
+  totalUsedValueNok: number;
+  totalReplacementValueNok: number;
+  recommendation: Recommendation;
 };
 
 export default function KomIGang() {
   const [images, setImages] = useState<SelectedImage[]>([]);
-  const [results, setResults] = useState<ItemEstimate[] | null>(null);
-  const [totalNok, setTotalNok] = useState<number | null>(null);
+  const [data, setData] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +45,7 @@ export default function KomIGang() {
       previewUrl: URL.createObjectURL(file),
     }));
     setImages((prev) => [...prev, ...newImages]);
-    setResults(null);
+    setData(null);
     setError(null);
   }
 
@@ -48,7 +61,7 @@ export default function KomIGang() {
   async function handleAnalyze() {
     setLoading(true);
     setError(null);
-    setResults(null);
+    setData(null);
 
     const formData = new FormData();
     images.forEach((img) => formData.append("images", img.file));
@@ -56,9 +69,8 @@ export default function KomIGang() {
     try {
       const res = await fetch("/api/analyze", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Analyse feilet");
-      const data = await res.json();
-      setResults(data.results);
-      setTotalNok(data.totalNok);
+      const json: AnalyzeResponse = await res.json();
+      setData(json);
     } catch (err) {
       setError("Noe gikk galt under analysen. Prøv igjen.");
     } finally {
@@ -122,26 +134,44 @@ export default function KomIGang() {
 
         {error && <p className={styles.message}>{error}</p>}
 
-        {results && (
-          <div className={styles.results}>
-            {results.map((r) => (
-              <div className={styles.resultRow} key={r.fileName}>
-                <div>
-                  <strong>{r.item}</strong>
-                  {r.brand && <span className={styles.resultMeta}> · {r.brand}</span>}
-                  <span className={styles.resultMeta}> · {r.condition}</span>
+        {data && (
+          <>
+            <div className={styles.results}>
+              {data.results.map((r) => (
+                <div className={styles.resultRow} key={r.fileName}>
+                  <div>
+                    <strong>{r.item}</strong>
+                    {r.brand && <span className={styles.resultMeta}> · {r.brand}</span>}
+                    <span className={styles.resultMeta}> · {r.condition}</span>
+                    {r.estimatedAgeYears !== null && (
+                      <span className={styles.resultMeta}> · ca. {r.estimatedAgeYears} år</span>
+                    )}
+                  </div>
+                  <div className={styles.resultValue}>
+                    {r.estimatedValueNok.toLocaleString("nb-NO")} kr
+                  </div>
                 </div>
-                <div className={styles.resultValue}>{r.estimatedValueNok.toLocaleString("nb-NO")} kr</div>
+              ))}
+              <div className={styles.total}>
+                <span>Samlet brukt verdi</span>
+                <span>{data.totalUsedValueNok.toLocaleString("nb-NO")} kr</span>
               </div>
-            ))}
-            <div className={styles.total}>
-              <span>Estimert totalsum</span>
-              <span>{totalNok?.toLocaleString("nb-NO")} kr</span>
+              <div className={styles.total}>
+                <span>Samlet nypris (gjenanskaffelse)</span>
+                <span>{data.totalReplacementValueNok.toLocaleString("nb-NO")} kr</span>
+              </div>
             </div>
-          </div>
+
+            <div className={styles.recommendation}>
+              <p className={styles.recommendationLabel}>Anbefalt forsikringssum</p>
+              <p className={styles.recommendationValue}>
+                {data.recommendation.recommendedSumNok.toLocaleString("nb-NO")} kr
+              </p>
+              <p className={styles.recommendationReasoning}>{data.recommendation.reasoning}</p>
+            </div>
+          </>
         )}
       </main>
     </div>
   );
 }
-
