@@ -13,9 +13,6 @@ type ItemEstimate = {
   fileName: string;
   item: string;
   brand: string | null;
-  condition: string;
-  estimatedAgeYears: number | null;
-  estimatedValueNok: number;
   estimatedNewPriceNok: number;
   note: string | null;
 };
@@ -142,20 +139,9 @@ export default function KomIGang() {
                   <div>
                     <strong>{r.item}</strong>
                     {r.brand && <span className={styles.resultMeta}> · {r.brand}</span>}
-                    <span className={styles.resultMeta}> · {r.condition}</span>
-                    {r.estimatedAgeYears !== null && (
-                      <span className={styles.resultMeta}> · ca. {r.estimatedAgeYears} år</span>
-                    )}
-                  </div>
-                  <div className={styles.resultValue}>
-                    {r.estimatedValueNok.toLocaleString("nb-NO")} kr
                   </div>
                 </div>
               ))}
-              <div className={styles.total}>
-                <span>Samlet brukt verdi</span>
-                <span>{data.totalUsedValueNok.toLocaleString("nb-NO")} kr</span>
-              </div>
               <div className={styles.total}>
                 <span>Samlet nypris (gjenanskaffelse)</span>
                 <span>{data.totalReplacementValueNok.toLocaleString("nb-NO")} kr</span>

@@ -12,9 +12,6 @@ type ItemEstimate = {
   fileName: string;
   item: string;
   brand: string | null;
-  condition: string;
-  estimatedAgeYears: number | null;
-  estimatedValueNok: number;
   estimatedNewPriceNok: number;
   note: string | null;
 };
@@ -63,8 +60,8 @@ export async function POST(req: NextRequest) {
           content: [
             {
               type: "text",
-              text: `Se på bildet og identifiser gjenstanden. Vurder omtrentlig alder ut fra hvor slitt eller moderne den ser ut. Svar KUN med gyldig JSON på nøyaktig dette formatet, ingen annen tekst, ingen markdown-kodeblokk:
-{"item": "kort navn på gjenstanden", "brand": "merke hvis synlig, ellers null", "condition": "ny/god/brukt/slitt", "estimatedAgeYears": omtrentlig alder i år som heltall (gjett hvis usikker), "estimatedValueNok": brukt/gjenkjøpsverdi i dag som heltall i norske kroner, "estimatedNewPriceNok": hva det ville kostet å kjøpe tilsvarende nytt i dag som heltall i norske kroner, "note": kort forklaring på anslaget, eller null}`,
+              text: `Se på bildet og identifiser gjenstanden. Svar KUN med gyldig JSON på nøyaktig dette formatet, ingen annen tekst, ingen markdown-kodeblokk:
+{"item": "kort navn på gjenstanden", "brand": "merke hvis synlig, ellers null", "estimatedNewPriceNok": hva det ville kostet å kjøpe tilsvarende nytt i dag som heltall i norske kroner, "note": kort forklaring på anslaget, eller null}`,
             },
             {
               type: "image_url",
@@ -79,9 +76,6 @@ export async function POST(req: NextRequest) {
     const parsed = parseJson<Omit<ItemEstimate, "fileName">>(text, {
       item: "Kunne ikke tolkes",
       brand: null,
-      condition: "ukjent",
-      estimatedAgeYears: null,
-      estimatedValueNok: 0,
       estimatedNewPriceNok: 0,
       note: "KI-svaret var ikke gyldig JSON",
     });
@@ -89,7 +83,6 @@ export async function POST(req: NextRequest) {
     results.push({ fileName: file.name, ...parsed });
   }
 
-  const totalUsedValueNok = results.reduce((sum, r) => sum + (r.estimatedValueNok || 0), 0);
   const totalReplacementValueNok = results.reduce((sum, r) => sum + (r.estimatedNewPriceNok || 0), 0);
 
   const recommendationResponse = await mistral.chat.complete({
@@ -101,7 +94,7 @@ export async function POST(req: NextRequest) {
 
 ${JSON.stringify(results, null, 2)}
 
-Samlet brukt/gjenkjøpsverdi i dag: ${totalUsedValueNok} kr
+
 Samlet nypris (gjenanskaffelsesverdi): ${totalReplacementValueNok} kr
 
 Gi en anbefaling for hvor høy innboforsikringssum brukeren bør sette. Ta hensyn til at:
@@ -124,7 +117,6 @@ Svar KUN med gyldig JSON, ingen annen tekst, ingen markdown-kodeblokk:
 
   return NextResponse.json({
     results,
-    totalUsedValueNok,
     totalReplacementValueNok,
     recommendation,
   });
