@@ -168,3 +168,22 @@
   margin: 0;
 }
 
+.folderZone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--ink-muted);
+  cursor: pointer;
+  background: var(--surface);
+}
+
+.folderZone:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
