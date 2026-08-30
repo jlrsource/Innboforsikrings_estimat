@@ -187,3 +187,50 @@
   color: var(--ink);
 }
 
+.compareBlock {
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+
+.compareLabel {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  margin-bottom: 0.4rem;
+}
+
+.compareInputRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 220px;
+}
+
+.compareInput {
+  flex: 1;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.compareSuffix {
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.compareWarning {
+  margin: 0.7rem 0 0;
+  font-weight: 600;
+  color: #b3432f;
+}
+
+.compareOk {
+  margin: 0.7rem 0 0;
+  font-weight: 600;
+  color: #2f7d4f;
+}
+

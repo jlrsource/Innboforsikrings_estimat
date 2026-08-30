@@ -17,6 +17,8 @@ type ItemEstimate = {
 type Recommendation = {
   recommendedSumNok: number;
   reasoning: string;
+  coverageGapNok: number | null;
+  coverageMessage: string | null;
 };
 
 function extractText(raw: unknown): string {
@@ -41,6 +43,10 @@ export async function POST(req: NextRequest) {
   const files = formData.getAll("images") as File[];
   const textItemsRaw = formData.get("textItems");
   const textItems: string[] = textItemsRaw ? JSON.parse(textItemsRaw as string) : [];
+
+  const currentSumRaw = formData.get("currentSum");
+  const currentSumNok =
+    currentSumRaw && !Number.isNaN(Number(currentSumRaw)) ? Number(currentSumRaw) : null;
 
   if (files.length === 0 && textItems.length === 0) {
     return NextResponse.json({ error: "Ingen bilder eller gjenstander mottatt" }, { status: 400 });
@@ -108,6 +114,12 @@ export async function POST(req: NextRequest) {
 
   const totalReplacementValueNok = results.reduce((sum, r) => sum + (r.estimatedNewPriceNok || 0), 0);
 
+  const currentSumBlock =
+    currentSumNok !== null
+      ? `\n\nBrukeren har oppgitt at de i dag har en innboforsikringssum på ${currentSumNok} kr.
+I tillegg til anbefalingen, regn ut differansen mellom anbefalt sum og denne oppgitte summen (anbefalt sum minus oppgitt sum), og fortell brukeren tydelig om de er underforsikret eller overforsikret, og med hvor mye. Fyll ut "coverageGapNok" med denne differansen som et heltall (positivt tall = underforsikret, negativt tall = overforsikret), og "coverageMessage" med en kort, tydelig setning om dette (f.eks. "Du er trolig underforsikret med 120 000 kr" eller "Du ligger 50 000 kr over anbefalt sum, det ser bra ut").`
+      : `\n\nBrukeren har ikke oppgitt hva de har i innboforsikring i dag, så sett "coverageGapNok" og "coverageMessage" til null.`;
+
   const recommendationResponse = await mistral.chat.complete({
     model: TEXT_MODEL,
     messages: [
@@ -123,20 +135,30 @@ Gi en anbefaling for hvor høy innboforsikringssum brukeren bør sette. Ta hensy
 - Innboforsikring i Norge skal dekke gjenanskaffelsesverdi, det brukeren allerede har oppgitt.
 - Brukeren har sannsynligvis ikke registrert alt (klær, kjøkkenutstyr, mindre ting), så det bør legges på en sikkerhetsmargin.
 - Underforsikring i Norge fører til proporsjonalt redusert utbetaling ved skade, så det er tryggere å sette summen litt for høyt enn for lavt.
-- Rund av til et vanlig forsikringstrinn (f.eks. nærmeste 50 000 kr).
+- Rund av til et vanlig forsikringstrinn (f.eks. nærmeste 50 000 kr).${currentSumBlock}
 
 Svar KUN med gyldig JSON, ingen annen tekst, ingen markdown-kodeblokk:
-{"recommendedSumNok": et rundt tall i norske kroner, "reasoning": "en kort, konkret forklaring på 3-5 setninger"}`,
+{"recommendedSumNok": et rundt tall i norske kroner, "reasoning": "en kort, konkret forklaring på 3-5 setninger", "coverageGapNok": et heltall eller null, "coverageMessage": "en kort setning" eller null}`,
       },
     ],
   });
 
   const recText = extractText(recommendationResponse.choices?.[0]?.message?.content);
+  const fallbackRecommendedSum = Math.round((totalReplacementValueNok * 1.2) / 50000) * 50000;
+  const fallbackGap = currentSumNok !== null ? fallbackRecommendedSum - currentSumNok : null;
   const recommendation = parseJson<Recommendation>(recText, {
-    recommendedSumNok: Math.round((totalReplacementValueNok * 1.2) / 50000) * 50000,
+    recommendedSumNok: fallbackRecommendedSum,
     reasoning: "Automatisk anbefaling kunne ikke genereres, dette er et enkelt overslag med 20 % margin.",
+    coverageGapNok: fallbackGap,
+    coverageMessage:
+      fallbackGap === null
+        ? null
+        : fallbackGap > 0
+          ? `Du er trolig underforsikret med ${fallbackGap.toLocaleString("nb-NO")} kr.`
+          : `Du ligger ${Math.abs(fallbackGap).toLocaleString("nb-NO")} kr over anbefalt sum.`,
   });
 
   return NextResponse.json({ results, totalReplacementValueNok, recommendation });
 }
+
 

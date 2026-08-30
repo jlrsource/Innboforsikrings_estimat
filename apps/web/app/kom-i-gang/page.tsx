@@ -21,6 +21,8 @@ type ItemEstimate = {
 type Recommendation = {
   recommendedSumNok: number;
   reasoning: string;
+  coverageGapNok: number | null;
+  coverageMessage: string | null;
 };
 
 type AnalyzeResponse = {
@@ -33,6 +35,7 @@ export default function KomIGang() {
   const [images, setImages] = useState<SelectedImage[]>([]);
   const [textItems, setTextItems] = useState<string[]>([]);
   const [newTextItem, setNewTextItem] = useState("");
+  const [currentSum, setCurrentSum] = useState("");
   const [data, setData] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +82,11 @@ export default function KomIGang() {
     const formData = new FormData();
     images.forEach((img) => formData.append("images", img.file));
     formData.append("textItems", JSON.stringify(textItems));
+
+    const trimmedSum = currentSum.trim();
+    if (trimmedSum !== "" && !Number.isNaN(Number(trimmedSum)) && Number(trimmedSum) >= 0) {
+      formData.append("currentSum", trimmedSum);
+    }
 
     try {
       const res = await fetch("/api/analyze", { method: "POST", body: formData });
@@ -186,16 +194,36 @@ export default function KomIGang() {
         </section>
 
         {totalCount > 0 && (
-          <button
-            type="button"
-            className={styles.analyzeButton}
-            onClick={handleAnalyze}
-            disabled={loading}
-          >
-            {loading
-              ? "Analyserer …"
-              : `Analyser ${totalCount} gjenstand${totalCount > 1 ? "er" : ""}`}
-          </button>
+          <>
+            <div className={styles.compareBlock}>
+              <label className={styles.compareLabel} htmlFor="currentSum">
+                Hva har du i innboforsikring i dag? (valgfritt)
+              </label>
+              <div className={styles.compareInputRow}>
+                <input
+                  id="currentSum"
+                  type="number"
+                  min={0}
+                  placeholder="F.eks. 500000"
+                  value={currentSum}
+                  onChange={(e) => setCurrentSum(e.target.value)}
+                  className={styles.compareInput}
+                />
+                <span className={styles.compareSuffix}>kr</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className={styles.analyzeButton}
+              onClick={handleAnalyze}
+              disabled={loading}
+            >
+              {loading
+                ? "Analyserer …"
+                : `Analyser ${totalCount} gjenstand${totalCount > 1 ? "er" : ""}`}
+            </button>
+          </>
         )}
 
         {error && <p className={styles.message}>{error}</p>}
@@ -227,6 +255,18 @@ export default function KomIGang() {
                 {data.recommendation.recommendedSumNok.toLocaleString("nb-NO")} kr
               </p>
               <p className={styles.recommendationReasoning}>{data.recommendation.reasoning}</p>
+
+              {data.recommendation.coverageMessage && (
+                <p
+                  className={
+                    data.recommendation.coverageGapNok !== null && data.recommendation.coverageGapNok > 0
+                      ? styles.compareWarning
+                      : styles.compareOk
+                  }
+                >
+                  {data.recommendation.coverageMessage}
+                </p>
+              )}
             </div>
           </>
         )}
@@ -234,3 +274,4 @@ export default function KomIGang() {
     </div>
   );
 }
+
