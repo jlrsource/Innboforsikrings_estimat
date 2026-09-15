@@ -1,159 +1,58 @@
-# Turborepo starter
+# Innboestimat
 
-This Turborepo starter is maintained by the Turborepo core team.
+Innboestimat er en webapp som bruker KI til å anslå hva du bør ha i innboforsikring, basert på bilder (eller bare navn) av tingene du eier.
 
-## Using this example
+## Bakgrunnen
 
-Run the following command:
+Jeg studerer Ingeniørvitenskap og IKT ved NTNU, og ville lage et fullstack-prosjekt for å lære meg noe nytt utenom pensum, ikke for å bygge et ferdig produkt. Da jeg lette etter en idé, spurte jeg rett og slett farfar hva slags webapp han kunne tenkt seg å bruke. Svaret hans ble utgangspunktet for prosjektet: noe som kunne se på tingene i huset hans og fortelle ham om innboforsikringen holder mål.
 
-```sh
-npx create-turbo@latest
+Prosjektet er ikke laget for nøyaktighet eller for faktisk å erstatte en forsikringsrådgiver, det er laget for gøy og for å lære.
+
+## Hva appen gjør
+
+- Last opp bilder av eiendelene dine, ett og ett eller en hel mappe med bilder samtidig.
+- Legg til gjenstander du ikke har bilde av, bare skriv inn navnet (f.eks. «iPhone 13»), så anslår KI-en prisen ut fra navnet alene.
+- KI-en identifiserer hver gjenstand og anslår hva den ville kostet å kjøpe tilsvarende ny i dag (gjenanskaffelsesverdi, som er det norsk innboforsikring faktisk skal dekke).
+- Appen summerer alt og gir en anbefalt forsikringssum, med en kort begrunnelse som tar hensyn til at man garantert ikke har fotografert alt man eier (klær, kjøkkenutstyr, småting), og at underforsikring i Norge gir proporsjonalt redusert utbetaling ved skade.
+- Du kan valgfritt oppgi hva du har i forsikring i dag, så forteller KI-en deg om du ligger for høyt eller for lavt, og med hvor mye.
+
+## Hvordan det er bygget
+
+Monorepo satt opp med Turborepo og pnpm, med en Next.js-app (`apps/web`) som per nå er hele produktet. Det er ingen separat backend, KI-kallene går gjennom Next.js sine egne Route Handlers (`apps/web/app/api/analyze/route.ts`).
+
+KI-leverandøren er Mistral (`mistral-small-latest`). Hvert bilde sendes til et vision-kall som identifiserer gjenstanden og anslår nypris, tekst-gjenstander sendes til et rent tekst-kall med samme mål. Til slutt går hele listen inn i ett siste kall som genererer den samlede forsikringsanbefalingen.
+
+**Stack:** Next.js (App Router), TypeScript, CSS-moduler, Turborepo, pnpm, Mistral AI.
+
+## Kjøre lokalt
+
+```bash
+pnpm install
 ```
 
-## What's inside?
+Opprett `apps/web/.env.local`:
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```
+MISTRAL_API_KEY=din-egen-nøkkel-her
 ```
 
-Without global `turbo`, use your package manager:
+Start dev-serveren:
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
+```bash
+pnpm dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Appen kjører da på `http://localhost:3000`.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Kjente begrensninger
 
-```sh
-turbo build --filter=docs
-```
+- Estimatene er ikke spesielt treffsikre ennå. Kontoen som brukes har kun tilgang til den minste Mistral-modellen, og det ligger ingen kalibrering mot faktiske markedspriser bak tallene.
+- Ingen persistens. Resultatene forsvinner ved sideoppdatering, det er ingen database koblet til.
+- Dette er ikke, og skal ikke forveksles med, en offisiell forsikringsvurdering.
 
-Without global `turbo`:
+## Mulige neste steg
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- Persistens, slik at gjenstandslisten består mellom økter
+- Kalibrering av prisestimatene mot ekte markedsdata
+- Mobilapp (strukturen i monorepoet er allerede klar for `apps/mobile`)
+- En ordentlig styling-runde
