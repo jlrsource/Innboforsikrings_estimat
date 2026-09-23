@@ -9,7 +9,7 @@ const STEPS = [
   },
   {
     title: "Analyser",
-    body: "KI-en ser bildene og anslår hva hver gjenstand er verdt, basert på hva den gjenkjenner.",
+    body: "Last opp bildene enten hver for seg eller i en mappe. KI-en ser bildene og anslår hva hver gjenstand er verdt, basert på hva den gjenkjenner.",
   },
   {
     title: "Se totalen",
@@ -46,7 +46,7 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <p>Innboestimat — et prosjekt av Julian</p>
+        <p></p>
       </footer>
     </div>
   );
