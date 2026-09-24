@@ -8,19 +8,20 @@
   --line-strong: #c3cfdd;
 
   --navy: #0b2545;
-  --primary: #1d5bd8;
-  --primary-hover: #174bb5;
+  --primary: #1e3f8a;
+  --primary-hover: #16316e;
   --primary-ink: #ffffff;
-  --primary-soft: #e6eefc;
+  --primary-soft: #e8edf7;
+  --accent: #c8962e;
 
   --danger: #b4362a;
   --danger-soft: #fbeceb;
   --success: #1c7a4f;
   --success-soft: #e7f5ee;
 
-  --radius-sm: 8px;
-  --radius: 12px;
-  --shadow: 0 1px 2px rgba(15, 31, 56, 0.06), 0 4px 16px rgba(15, 31, 56, 0.06);
+  --radius-sm: 4px;
+  --radius: 6px;
+  --shadow: 0 1px 2px rgba(15, 31, 56, 0.05), 0 2px 8px rgba(15, 31, 56, 0.04);
   --shadow-lg: 0 2px 4px rgba(15, 31, 56, 0.06), 0 12px 32px rgba(15, 31, 56, 0.1);
 }
 
@@ -35,10 +36,11 @@
     --line-strong: #2f4262;
 
     --navy: #e7edf5;
-    --primary: #4c86f0;
-    --primary-hover: #6a9cf4;
+    --primary: #5b86e0;
+    --primary-hover: #7a9deb;
     --primary-ink: #ffffff;
-    --primary-soft: #182c4d;
+    --primary-soft: #172a4a;
+    --accent: #e0b25a;
 
     --danger: #f08a7e;
     --danger-soft: #3a1d1d;
@@ -81,6 +83,11 @@ a {
 button,
 input {
   font: inherit;
+}
+
+h1 {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 400;
 }
 
 :focus-visible {

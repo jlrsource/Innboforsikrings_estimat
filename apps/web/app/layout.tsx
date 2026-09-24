@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
+});
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-serif",
 });
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
@@ -23,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nb">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable}`}>
         {children}
       </body>
     </html>

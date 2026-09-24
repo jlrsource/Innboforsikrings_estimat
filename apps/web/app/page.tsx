@@ -41,7 +41,7 @@ export default function Home() {
         <section className={styles.steps}>
           {STEPS.map((step, i) => (
             <div className={styles.step} key={step.title}>
-              <span className={styles.stepNumber}>{i + 1}</span>
+              <span className={styles.stepNumber}>0{i + 1}</span>
               <h2 className={styles.stepTitle}>{step.title}</h2>
               <p className={styles.stepBody}>{step.body}</p>
             </div>
