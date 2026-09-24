@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Mistral } from "@mistralai/mistralai";
 
+export const maxDuration = 60;
 const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
 const VISION_MODEL = process.env.MISTRAL_VISION_MODEL ?? "mistral-small-latest";
 const TEXT_MODEL = process.env.MISTRAL_TEXT_MODEL ?? "mistral-small-latest";
+
 
 type ItemEstimate = {
   id: string;
