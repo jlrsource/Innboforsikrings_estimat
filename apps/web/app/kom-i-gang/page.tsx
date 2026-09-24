@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import styles from "./page.module.css";
+import { SiteHeader } from "../components/SiteHeader";
 
 type SelectedImage = {
   file: File;
@@ -31,6 +32,30 @@ type AnalyzeResponse = {
   recommendation: Recommendation;
 };
 
+const MAX_IMAGE_DIMENSION = 1280;
+const JPEG_QUALITY = 0.8;
+
+// Skalerer ned og konverterer til JPEG slik at forespørselen holder seg under Vercels grense på 4,5 MB.
+async function compressImage(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY),
+    );
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
 export default function KomIGang() {
   const [images, setImages] = useState<SelectedImage[]>([]);
   const [textItems, setTextItems] = useState<string[]>([]);
@@ -39,6 +64,7 @@ export default function KomIGang() {
   const [data, setData] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const folderRef = useRef<HTMLDialogElement>(null);
 
   function handleFiles(fileList: FileList | null) {
     if (!fileList) return;
@@ -61,6 +87,20 @@ export default function KomIGang() {
     });
   }
 
+  function clearImages() {
+    images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+    setImages([]);
+    closeFolder();
+  }
+
+  function openFolder() {
+    folderRef.current?.showModal();
+  }
+
+  function closeFolder() {
+    folderRef.current?.close();
+  }
+
   function handleAddTextItem(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = newTextItem.trim();
@@ -79,16 +119,17 @@ export default function KomIGang() {
     setError(null);
     setData(null);
 
-    const formData = new FormData();
-    images.forEach((img) => formData.append("images", img.file));
-    formData.append("textItems", JSON.stringify(textItems));
-
-    const trimmedSum = currentSum.trim();
-    if (trimmedSum !== "" && !Number.isNaN(Number(trimmedSum)) && Number(trimmedSum) >= 0) {
-      formData.append("currentSum", trimmedSum);
-    }
-
     try {
+      const formData = new FormData();
+      const compressed = await Promise.all(images.map((img) => compressImage(img.file)));
+      compressed.forEach((file) => formData.append("images", file));
+      formData.append("textItems", JSON.stringify(textItems));
+
+      const trimmedSum = currentSum.trim();
+      if (trimmedSum !== "" && !Number.isNaN(Number(trimmedSum)) && Number(trimmedSum) >= 0) {
+        formData.append("currentSum", trimmedSum);
+      }
+
       const res = await fetch("/api/analyze", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Analyse feilet");
       const json: AnalyzeResponse = await res.json();
@@ -104,6 +145,7 @@ export default function KomIGang() {
 
   return (
     <div className={styles.page}>
+      <SiteHeader />
       <main className={styles.main}>
         <Link href="/" className={styles.back}>
           ← Tilbake
@@ -123,7 +165,12 @@ export default function KomIGang() {
               onChange={(e) => handleFiles(e.target.files)}
               className={styles.fileInput}
             />
-            <span>Klikk for å velge bilder, eller dra dem hit</span>
+            <svg className={styles.zoneIcon} viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+              <circle cx="12" cy="13" r="3.5" />
+            </svg>
+            <span className={styles.zoneTitle}>Velg bilder</span>
+            <span className={styles.zoneHint}>Klikk her, eller dra bildene hit</span>
           </label>
 
           <label className={styles.folderZone}>
@@ -134,27 +181,76 @@ export default function KomIGang() {
               className={styles.fileInput}
               {...({ webkitdirectory: "true", directory: "true" } as Record<string, string>)}
             />
-            <span>Eller velg en hel mappe</span>
+            <svg className={styles.zoneIcon} viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 6h6l2 2h10v11H3z" />
+            </svg>
+            <span className={styles.zoneTitle}>Velg en mappe</span>
+            <span className={styles.zoneHint}>Alle bildene i mappen</span>
           </label>
         </div>
 
         {images.length > 0 && (
-          <div className={styles.grid}>
-            {images.map((image, index) => (
-              <div className={styles.thumb} key={image.previewUrl}>
-                <img src={image.previewUrl} alt={image.file.name} />
-                <button
-                  type="button"
-                  className={styles.remove}
-                  onClick={() => removeImage(index)}
-                  aria-label={`Fjern ${image.file.name}`}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
+          <button type="button" className={styles.folder} onClick={openFolder}>
+            <svg className={styles.folderIcon} viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 6h6l2 2h10v11H3z" />
+            </svg>
+            <span className={styles.folderText}>
+              <span className={styles.folderTitle}>Opplastede bilder</span>
+              <span className={styles.folderCount}>
+                {images.length} bilde{images.length > 1 ? "r" : ""}
+              </span>
+            </span>
+            <span className={styles.folderAction}>Åpne</span>
+          </button>
         )}
+
+        <dialog
+          ref={folderRef}
+          className={styles.dialog}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeFolder();
+          }}
+        >
+          <div className={styles.dialogHeader}>
+            <h2 className={styles.dialogTitle}>
+              Opplastede bilder <span className={styles.dialogCount}>({images.length})</span>
+            </h2>
+            <button type="button" className={styles.dialogClose} onClick={closeFolder} aria-label="Lukk">
+              ×
+            </button>
+          </div>
+
+          {images.length === 0 ? (
+            <p className={styles.dialogEmpty}>Ingen bilder i mappen.</p>
+          ) : (
+            <div className={styles.grid}>
+              {images.map((image, index) => (
+                <div className={styles.thumb} key={image.previewUrl}>
+                  <img src={image.previewUrl} alt={image.file.name} />
+                  <button
+                    type="button"
+                    className={styles.remove}
+                    onClick={() => removeImage(index)}
+                    aria-label={`Fjern ${image.file.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className={styles.dialogFooter}>
+            {images.length > 0 && (
+              <button type="button" className={styles.dialogClear} onClick={clearImages}>
+                Fjern alle
+              </button>
+            )}
+            <button type="button" className={styles.dialogDone} onClick={closeFolder}>
+              Ferdig
+            </button>
+          </div>
+        </dialog>
 
         <section className={styles.manualSection}>
           <h2 className={styles.manualHeading}>Legg til gjenstand uten bilde</h2>
@@ -219,14 +315,23 @@ export default function KomIGang() {
               onClick={handleAnalyze}
               disabled={loading}
             >
-              {loading
-                ? "Analyserer …"
-                : `Analyser ${totalCount} gjenstand${totalCount > 1 ? "er" : ""}`}
+              {loading ? (
+                <>
+                  <span className={styles.spinner} aria-hidden="true" />
+                  Analyserer …
+                </>
+              ) : (
+                `Analyser ${totalCount} gjenstand${totalCount > 1 ? "er" : ""}`
+              )}
             </button>
           </>
         )}
 
-        {error && <p className={styles.message}>{error}</p>}
+        {error && (
+          <p className={styles.message} role="alert">
+            {error}
+          </p>
+        )}
 
         {data && (
           <>

@@ -1,13 +1,63 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-alt: #eef3fa;
+  --ink: #0f1f38;
+  --ink-muted: #5a6b82;
+  --line: #dde5ef;
+  --line-strong: #c3cfdd;
+
+  --navy: #0b2545;
+  --primary: #1d5bd8;
+  --primary-hover: #174bb5;
+  --primary-ink: #ffffff;
+  --primary-soft: #e6eefc;
+
+  --danger: #b4362a;
+  --danger-soft: #fbeceb;
+  --success: #1c7a4f;
+  --success-soft: #e7f5ee;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(15, 31, 56, 0.06), 0 4px 16px rgba(15, 31, 56, 0.06);
+  --shadow-lg: 0 2px 4px rgba(15, 31, 56, 0.06), 0 12px 32px rgba(15, 31, 56, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0b1422;
+    --surface: #111d30;
+    --surface-alt: #16243b;
+    --ink: #e7edf5;
+    --ink-muted: #9aabc2;
+    --line: #22324b;
+    --line-strong: #2f4262;
+
+    --navy: #e7edf5;
+    --primary: #4c86f0;
+    --primary-hover: #6a9cf4;
+    --primary-ink: #ffffff;
+    --primary-soft: #182c4d;
+
+    --danger: #f08a7e;
+    --danger-soft: #3a1d1d;
+    --success: #5fcf98;
+    --success-soft: #15352a;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.35);
   }
+
+  html {
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 html,
@@ -17,14 +67,10 @@ body {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -32,19 +78,38 @@ a {
   text-decoration: none;
 }
 
-.imgDark {
-  display: none;
+button,
+input {
+  font: inherit;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 
-  .imgLight {
-    display: none;
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
   }
-  .imgDark {
-    display: unset;
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
