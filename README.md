@@ -2,6 +2,8 @@
 
 Innboestimat er en webapp som bruker KI til å anslå hva du bør ha i innboforsikring, basert på bilder (eller bare navn) av tingene du eier.
 
+**Live:** [innboforsikring-estimat.vercel.app](https://innboforsikring-estimat.vercel.app/)
+
 ## Bakgrunnen
 
 Jeg studerer Ingeniørvitenskap og IKT ved NTNU, og ville lage et fullstack-prosjekt for å lære meg noe nytt utenom pensum, ikke for å bygge et ferdig produkt. Da jeg lette etter en idé, spurte jeg rett og slett farfar hva slags webapp han kunne tenkt seg å bruke. Svaret hans ble utgangspunktet for prosjektet: noe som kunne se på tingene i huset hans og fortelle ham om innboforsikringen holder mål.
