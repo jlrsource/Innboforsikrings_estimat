@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Mistral } from "@mistralai/mistralai";
+import { mistral, VISION_MODEL, TEXT_MODEL, extractText, parseJson } from "../../lib/mistral";
 
 export const maxDuration = 60;
-const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
-const VISION_MODEL = process.env.MISTRAL_VISION_MODEL ?? "pixtral-12b-latest";
-const TEXT_MODEL = process.env.MISTRAL_TEXT_MODEL ?? "ministral-8b-latest";
 
 
 type ItemEstimate = {
@@ -22,23 +19,6 @@ type Recommendation = {
   coverageGapNok: number | null;
   coverageMessage: string | null;
 };
-
-function extractText(raw: unknown): string {
-  if (typeof raw === "string") return raw;
-  if (Array.isArray(raw)) {
-    return raw.map((c) => ("text" in c ? c.text : "")).join("");
-  }
-  return "{}";
-}
-
-function parseJson<T>(text: string, fallback: T): T {
-  try {
-    const cleaned = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(cleaned) as T;
-  } catch {
-    return fallback;
-  }
-}
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();

@@ -19,6 +19,14 @@ type ItemEstimate = {
   note: string | null;
 };
 
+type InsurerRecommendation = {
+  insurerId: string;
+  name: string;
+  url: string;
+  deal: string | null;
+  reasoning: string;
+};
+
 type Recommendation = {
   recommendedSumNok: number;
   reasoning: string;
@@ -64,6 +72,13 @@ export default function KomIGang() {
   const [data, setData] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showInsurerForm, setShowInsurerForm] = useState(false);
+  const [bank, setBank] = useState("");
+  const [otherInsurance, setOtherInsurance] = useState("");
+  const [publicSector, setPublicSector] = useState<"ja" | "nei" | "">("");
+  const [insurer, setInsurer] = useState<InsurerRecommendation | null>(null);
+  const [insurerLoading, setInsurerLoading] = useState(false);
+  const [insurerError, setInsurerError] = useState<string | null>(null);
   const folderRef = useRef<HTMLDialogElement>(null);
 
   function handleFiles(fileList: FileList | null) {
@@ -118,6 +133,8 @@ export default function KomIGang() {
     setLoading(true);
     setError(null);
     setData(null);
+    setInsurer(null);
+    setInsurerError(null);
 
     try {
       const formData = new FormData();
@@ -141,7 +158,41 @@ export default function KomIGang() {
     }
   }
 
+  async function handleRecommendInsurer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!data) return;
+    setInsurerLoading(true);
+    setInsurerError(null);
+    setInsurer(null);
+
+    try {
+      const res = await fetch("/api/recommend-insurer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recommendedSumNok: data.recommendation.recommendedSumNok,
+          items: data.results.map(({ item, brand, estimatedNewPriceNok }) => ({
+            item,
+            brand,
+            estimatedNewPriceNok,
+          })),
+          bank,
+          otherInsurance,
+          publicSector,
+        }),
+      });
+      if (!res.ok) throw new Error("Anbefaling feilet");
+      const json: { insurer: InsurerRecommendation } = await res.json();
+      setInsurer(json.insurer);
+    } catch {
+      setInsurerError("Kunne ikke lage en anbefaling. Prøv igjen.");
+    } finally {
+      setInsurerLoading(false);
+    }
+  }
+
   const totalCount = images.length + textItems.length;
+  const hasInsurerAnswers = bank.trim() !== "" || otherInsurance.trim() !== "" || publicSector !== "";
 
   return (
     <div className={styles.page}>
@@ -373,6 +424,94 @@ export default function KomIGang() {
                 </p>
               )}
             </div>
+
+            {!showInsurerForm ? (
+              <button
+                type="button"
+                className={styles.insurerPrompt}
+                onClick={() => setShowInsurerForm(true)}
+              >
+                Ønsker du en anbefaling på hvilket selskap du bør velge?
+              </button>
+            ) : (
+              <form className={styles.insurerForm} onSubmit={handleRecommendInsurer}>
+                <h2 className={styles.manualHeading}>Hvilket selskap passer for deg?</h2>
+                <p className={styles.manualHint}>
+                  Svar på det du vil, så bruker KI-en svarene til å finne selskapet som trolig gir deg best tilbud.
+                </p>
+
+                <label className={styles.compareLabel} htmlFor="bank">
+                  Hvilken bank bruker du?
+                </label>
+                <input
+                  id="bank"
+                  type="text"
+                  placeholder="F.eks. DNB eller SpareBank 1"
+                  value={bank}
+                  onChange={(e) => setBank(e.target.value)}
+                  className={styles.compareInput}
+                />
+
+                <label className={styles.compareLabel} htmlFor="otherInsurance">
+                  Har du andre forsikringer i dag, og i så fall hvor?
+                </label>
+                <input
+                  id="otherInsurance"
+                  type="text"
+                  placeholder="F.eks. bilforsikring i If"
+                  value={otherInsurance}
+                  onChange={(e) => setOtherInsurance(e.target.value)}
+                  className={styles.compareInput}
+                />
+
+                <label className={styles.compareLabel} htmlFor="publicSector">
+                  Jobber du i kommune, fylke eller helseforetak?
+                </label>
+                <select
+                  id="publicSector"
+                  value={publicSector}
+                  onChange={(e) => setPublicSector(e.target.value as "ja" | "nei" | "")}
+                  className={styles.compareInput}
+                >
+                  <option value="">Vil ikke svare</option>
+                  <option value="ja">Ja</option>
+                  <option value="nei">Nei</option>
+                </select>
+
+                <button
+                  type="submit"
+                  className={styles.analyzeButton}
+                  disabled={insurerLoading || !hasInsurerAnswers}
+                >
+                  {insurerLoading ? (
+                    <>
+                      <span className={styles.spinner} aria-hidden="true" />
+                      Finner selskap …
+                    </>
+                  ) : (
+                    "Få anbefaling"
+                  )}
+                </button>
+              </form>
+            )}
+
+            {insurerError && (
+              <p className={styles.message} role="alert">
+                {insurerError}
+              </p>
+            )}
+
+            {insurer && (
+              <div className={styles.insurer}>
+                <p className={styles.recommendationLabel}>Anbefalt forsikringsselskap</p>
+                <p className={styles.insurerName}>{insurer.name}</p>
+                {insurer.deal && <p className={styles.insurerDeal}>{insurer.deal}</p>}
+                <p className={styles.recommendationReasoning}>{insurer.reasoning}</p>
+                <a href={insurer.url} target="_blank" rel="noopener noreferrer" className={styles.insurerLink}>
+                  Sjekk ut {insurer.name} →
+                </a>
+              </div>
+            )}
           </>
         )}
       </main>
